@@ -1,20 +1,33 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Platform } from 'react-native';
+import { AuthProvider } from './src/context/AuthContext';
+import { CustomThemeProvider } from './src/context/ThemeContext';
+import AppNavigator from './src/navigation/AppNavigator';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+if (Platform.OS === 'web') {
+  const style = document.createElement('style');
+  style.textContent = `
+    /* Fix for browser autofill overriding React Native dark themes */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus, 
+    input:-webkit-autofill:active {
+        transition: background-color 50000s ease-in-out 0s;
+        -webkit-text-fill-color: white !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaProvider>
+      <CustomThemeProvider>
+        <AuthProvider>
+          <AppNavigator />
+        </AuthProvider>
+      </CustomThemeProvider>
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
