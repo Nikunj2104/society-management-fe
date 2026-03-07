@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from 'react-native-paper';
 
 import AdminDashboard from '../screens/admin/AdminDashboard';
 import ManageResidents from '../screens/admin/ManageResidents';
@@ -13,6 +14,8 @@ import SettingsScreen from '../screens/common/SettingsScreen';
 const Tab = createBottomTabNavigator();
 
 const AdminNavigator = () => {
+    const theme = useTheme();
+
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -29,8 +32,12 @@ const AdminNavigator = () => {
                     };
                     return <MaterialIcons name={icons[route.name]} size={size} color={color} />;
                 },
-                tabBarActiveTintColor: '#4f46e5',
-                tabBarInactiveTintColor: 'gray',
+                tabBarActiveTintColor: theme.colors.primary,
+                tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
+                tabBarStyle: {
+                    backgroundColor: theme.colors.surface,
+                    borderTopColor: theme.colors.surfaceVariant,
+                },
             })}
         >
             <Tab.Screen name="Dashboard" component={AdminDashboard} />

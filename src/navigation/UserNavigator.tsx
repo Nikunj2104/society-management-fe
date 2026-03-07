@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from 'react-native-paper';
 
 import UserDashboard from '../screens/user/UserDashboard';
 import MyComplaints from '../screens/user/MyComplaints';
@@ -11,6 +12,8 @@ import SettingsScreen from '../screens/common/SettingsScreen';
 const Tab = createBottomTabNavigator();
 
 const UserNavigator = () => {
+    const theme = useTheme();
+
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -25,8 +28,12 @@ const UserNavigator = () => {
                     };
                     return <MaterialIcons name={icons[route.name]} size={size} color={color} />;
                 },
-                tabBarActiveTintColor: '#10b981',
-                tabBarInactiveTintColor: 'gray',
+                tabBarActiveTintColor: theme.colors.primary,
+                tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
+                tabBarStyle: {
+                    backgroundColor: theme.colors.surface,
+                    borderTopColor: theme.colors.surfaceVariant,
+                },
             })}
         >
             <Tab.Screen name="Dashboard" component={UserDashboard} />

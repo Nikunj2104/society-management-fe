@@ -8,7 +8,13 @@ import api from '../../services/api';
 const THEME_OPTIONS = [
     { label: 'Neon Cyber', value: 'neon' },
     { label: 'Ocean Light', value: 'ocean' },
-    { label: 'Sunset Dark', value: 'sunset' }
+    { label: 'Sunset Dark', value: 'sunset' },
+    { label: 'Holi (Vibrant)', value: 'holi' },
+    { label: 'Diwali (Festive)', value: 'diwali' },
+    { label: 'Uttarayan (Kite)', value: 'uttarayan' },
+    { label: 'Raksha Bandhan', value: 'rakshabandhan' },
+    { label: 'Janmashtami (Krishna)', value: 'janmashtami' },
+    { label: 'Ganesh Chaturthi', value: 'ganeshChaturthi' }
 ];
 
 const SettingsScreen = () => {
