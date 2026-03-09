@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "Society Management",
+    "slug": "society-management-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -22,7 +22,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.nikunj.shah.frontend"
+      "package": "com.societymanagement.admin"
     },
     "web": {
       "favicon": "./assets/favicon.png"
