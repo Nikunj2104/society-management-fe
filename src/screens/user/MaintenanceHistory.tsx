@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, useTheme, Surface, Button } from 'react-native-paper';
 import api from '../../services/api';
 
@@ -7,6 +7,13 @@ const MaintenanceHistory = () => {
     const [history, setHistory] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const theme = useTheme();
+
+    const [refreshing, setRefreshing] = useState(false);
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        await fetchHistory();
+        setRefreshing(false);
+    }, []);
 
     useEffect(() => {
         fetchHistory();
@@ -35,6 +42,7 @@ const MaintenanceHistory = () => {
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <Text variant="headlineSmall" style={[styles.title, { color: theme.colors.primary }]}>Maintenance Bills</Text>
             <FlatList
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />}
                 data={history}
                 keyExtractor={(item) => item._id}
                 renderItem={({ item }) => (

@@ -45,7 +45,8 @@ export const CustomThemeProvider = ({ children }: any) => {
     const fetchLiveFestivals = async () => {
         try {
             const response = await api.get(`/notifications?_t=${Date.now()}`);
-            const loadedFestivals = response.data || [];
+            const data = response.data;
+            const loadedFestivals = Array.isArray(data) ? data : [];
             setFestival(getCurrentFestival(loadedFestivals));
         } catch (apiError) {
             console.warn("Could not fetch remote festivals. Falling back to default list.");
@@ -56,7 +57,8 @@ export const CustomThemeProvider = ({ children }: any) => {
     const fetchLiveThemes = async () => {
         try {
             const response = await api.get(`/themes?_t=${Date.now()}`);
-            setDbThemes(response.data || []);
+            const data = response.data;
+            setDbThemes(Array.isArray(data) ? data : []);
         } catch (apiError) {
             console.error("Could not fetch DB themes.");
         }
@@ -104,8 +106,9 @@ export const CustomThemeProvider = ({ children }: any) => {
     let activeTheme = { ...baseTheme };
 
     // Apply Super Admin dynamic edits over the base theme if they exist in DB
-    const activeDbFestivalTheme = dbThemes.find(t => t.type === 'festival' && t.isActiveFestival);
-    const selectedDbTheme = dbThemes.find(t => t.themeKey === themeName);
+    const safeDbThemes = Array.isArray(dbThemes) ? dbThemes : [];
+    const activeDbFestivalTheme = safeDbThemes.find(t => t.type === 'festival' && t.isActiveFestival);
+    const selectedDbTheme = safeDbThemes.find(t => t.themeKey === themeName);
     const dbOverride = activeDbFestivalTheme || selectedDbTheme;
 
     if (dbOverride && dbOverride.colors) {

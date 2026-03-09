@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, ScrollView, RefreshControl } from 'react-native';
 import { Text, useTheme, Surface } from 'react-native-paper';
 import api from '../../services/api';
 
@@ -8,6 +8,13 @@ const SocietyInfo = () => {
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const theme = useTheme();
+
+    const [refreshing, setRefreshing] = useState(false);
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        await fetchInfo();
+        setRefreshing(false);
+    }, []);
 
     useEffect(() => {
         fetchInfo();
@@ -37,7 +44,10 @@ const SocietyInfo = () => {
     }
 
     return (
-        <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <ScrollView
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />}
+            contentContainerStyle={[styles.container, { backgroundColor: theme.colors.background }]}
+        >
             <Text variant="headlineSmall" style={[styles.title, { color: theme.colors.primary }]}>Society Info</Text>
 
             <Text variant="titleLarge" style={[styles.sectionTitle, { color: theme.colors.primary }]}>📅 Upcoming Events</Text>

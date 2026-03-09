@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, FlatList, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator, ScrollView, RefreshControl, KeyboardAvoidingView, Platform } from 'react-native';
 import { Text, useTheme, Surface, TextInput as PaperInput, Button, Chip } from 'react-native-paper';
 import api from '../../services/api';
 
@@ -10,6 +10,13 @@ const ManageMaintenance = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const [form, setForm] = useState({ userId: '', amount: '', month: '', year: '', dueDate: '', description: '' });
     const theme = useTheme();
+
+    const [refreshing, setRefreshing] = useState(false);
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        await fetchData();
+        setRefreshing(false);
+    }, []);
 
     useEffect(() => {
         fetchData();
@@ -84,6 +91,7 @@ const ManageMaintenance = () => {
             </View>
 
             <FlatList
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />}
                 data={records}
                 keyExtractor={(item) => item._id}
                 renderItem={({ item }) => (
@@ -117,79 +125,143 @@ const ManageMaintenance = () => {
                 ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 20, color: theme.colors.onSurfaceVariant }}>No records yet.</Text>}
             />
 
-            <Modal visible={modalVisible} animationType="slide" transparent>
-                <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
-                    <Surface style={[styles.modalContent, { backgroundColor: theme.colors.background }]} elevation={5}>
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            <Text variant="titleLarge" style={[styles.modalTitle, { color: theme.colors.onSurface }]}>New Maintenance Record</Text>
+            <Modal visible={modalVisible} animationType="fade" transparent>
+                <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.85)' }]}>
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        style={{ width: '100%' }}
+                    >
+                        <Surface style={[styles.modalContent, { backgroundColor: theme.colors.background }]} elevation={5}>
+                            <ScrollView contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled">
+                                <View style={styles.modalHeader}>
+                                    <View>
+                                        <Text variant="headlineSmall" style={{ color: theme.colors.primary, fontWeight: '900', letterSpacing: -1 }}>
+                                            NEW BILL
+                                        </Text>
+                                        <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                                            Generate maintenance record.
+                                        </Text>
+                                    </View>
+                                    <TouchableOpacity onPress={() => setModalVisible(false)}>
+                                        <PaperInput.Icon icon="close" color={theme.colors.onSurfaceVariant} />
+                                    </TouchableOpacity>
+                                </View>
 
-                            <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 10 }}>Select Resident</Text>
-                            <View style={styles.selectionGrid}>
-                                {residents.map((r: any) => (
-                                    <Chip
-                                        key={r._id}
+                                <View style={{ marginTop: 30 }}>
+                                    <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 15, fontWeight: '700' }}>SELECT RESIDENT</Text>
+                                    <View style={styles.selectionGridPremium}>
+                                        {residents.map((r: any) => (
+                                            <Chip
+                                                key={r._id}
+                                                mode="outlined"
+                                                selected={form.userId === r._id}
+                                                onPress={() => setForm({ ...form, userId: r._id })}
+                                                style={{
+                                                    backgroundColor: form.userId === r._id ? theme.colors.primary : '#1a1a1a',
+                                                    borderColor: form.userId === r._id ? theme.colors.primary : '#333'
+                                                }}
+                                                textStyle={{ color: form.userId === r._id ? theme.colors.onPrimary : theme.colors.onSurface }}
+                                            >
+                                                {r.name} ({r.flatNumber})
+                                            </Chip>
+                                        ))}
+                                    </View>
+
+                                    <PaperInput
+                                        placeholder="Amount (₹)"
+                                        placeholderTextColor={theme.colors.onSurfaceVariant}
                                         mode="outlined"
-                                        selected={form.userId === r._id}
-                                        onPress={() => setForm({ ...form, userId: r._id })}
-                                        style={{ backgroundColor: form.userId === r._id ? theme.colors.primaryContainer : 'transparent', borderColor: form.userId === r._id ? theme.colors.primary : theme.colors.surfaceVariant }}
-                                        textStyle={{ color: form.userId === r._id ? theme.colors.onPrimaryContainer : theme.colors.onSurface }}
+                                        keyboardType="numeric"
+                                        style={styles.input}
+                                        outlineStyle={styles.inputOutline}
+                                        value={form.amount}
+                                        onChangeText={(text) => setForm({ ...form, amount: text })}
+                                        left={<PaperInput.Icon icon="currency-inr" color={theme.colors.onSurfaceVariant} />}
+                                        outlineColor={theme.colors.surfaceVariant}
+                                        activeOutlineColor={theme.colors.primary}
+                                        textColor={theme.colors.onSurface}
+                                    />
+
+                                    <View style={styles.rowPremium}>
+                                        <PaperInput
+                                            placeholder="Month"
+                                            placeholderTextColor={theme.colors.onSurfaceVariant}
+                                            mode="outlined"
+                                            style={[styles.input, { flex: 1, marginRight: 10 }]}
+                                            outlineStyle={styles.inputOutline}
+                                            value={form.month}
+                                            onChangeText={(text) => setForm({ ...form, month: text })}
+                                            left={<PaperInput.Icon icon="calendar-month" color={theme.colors.onSurfaceVariant} />}
+                                            outlineColor={theme.colors.surfaceVariant}
+                                            activeOutlineColor={theme.colors.primary}
+                                            textColor={theme.colors.onSurface}
+                                        />
+                                        <PaperInput
+                                            placeholder="Year"
+                                            placeholderTextColor={theme.colors.onSurfaceVariant}
+                                            mode="outlined"
+                                            keyboardType="numeric"
+                                            style={[styles.input, { flex: 1 }]}
+                                            outlineStyle={styles.inputOutline}
+                                            value={form.year}
+                                            onChangeText={(text) => setForm({ ...form, year: text })}
+                                            left={<PaperInput.Icon icon="calendar-range" color={theme.colors.onSurfaceVariant} />}
+                                            outlineColor={theme.colors.surfaceVariant}
+                                            activeOutlineColor={theme.colors.primary}
+                                            textColor={theme.colors.onSurface}
+                                        />
+                                    </View>
+
+                                    <PaperInput
+                                        placeholder="Due Date (YYYY-MM-DD)"
+                                        placeholderTextColor={theme.colors.onSurfaceVariant}
+                                        mode="outlined"
+                                        style={styles.input}
+                                        outlineStyle={styles.inputOutline}
+                                        value={form.dueDate}
+                                        onChangeText={(text) => setForm({ ...form, dueDate: text })}
+                                        left={<PaperInput.Icon icon="calendar-clock" color={theme.colors.onSurfaceVariant} />}
+                                        outlineColor={theme.colors.surfaceVariant}
+                                        activeOutlineColor={theme.colors.primary}
+                                        textColor={theme.colors.onSurface}
+                                    />
+
+                                    <PaperInput
+                                        placeholder="Description (optional)"
+                                        placeholderTextColor={theme.colors.onSurfaceVariant}
+                                        mode="outlined"
+                                        style={styles.input}
+                                        outlineStyle={styles.inputOutline}
+                                        value={form.description}
+                                        onChangeText={(text) => setForm({ ...form, description: text })}
+                                        left={<PaperInput.Icon icon="note-text-outline" color={theme.colors.onSurfaceVariant} />}
+                                        outlineColor={theme.colors.surfaceVariant}
+                                        activeOutlineColor={theme.colors.primary}
+                                        textColor={theme.colors.onSurface}
+                                    />
+
+                                    <Button
+                                        mode="contained"
+                                        onPress={handleCreate}
+                                        style={styles.postButton}
+                                        contentStyle={styles.buttonContent}
+                                        buttonColor={theme.colors.primary}
+                                        textColor={theme.colors.onPrimary}
+                                        labelStyle={{ fontSize: 16, fontWeight: 'bold', letterSpacing: 1 }}
                                     >
-                                        {r.name} ({r.flatNumber})
-                                    </Chip>
-                                ))}
-                            </View>
+                                        GENERATE BILL
+                                    </Button>
 
-                            <PaperInput
-                                mode="outlined"
-                                label="Amount (₹)"
-                                keyboardType="numeric"
-                                style={styles.input}
-                                value={form.amount}
-                                onChangeText={(text) => setForm({ ...form, amount: text })}
-                                theme={{ colors: { background: 'transparent' } }}
-                            />
-                            <View style={styles.row}>
-                                <PaperInput
-                                    mode="outlined"
-                                    label="Month (e.g. October)"
-                                    style={[styles.input, { flex: 1, marginRight: 10 }]}
-                                    value={form.month}
-                                    onChangeText={(text) => setForm({ ...form, month: text })}
-                                    theme={{ colors: { background: 'transparent' } }}
-                                />
-                                <PaperInput
-                                    mode="outlined"
-                                    label="Year (e.g. 2023)"
-                                    keyboardType="numeric"
-                                    style={[styles.input, { flex: 1 }]}
-                                    value={form.year}
-                                    onChangeText={(text) => setForm({ ...form, year: text })}
-                                    theme={{ colors: { background: 'transparent' } }}
-                                />
-                            </View>
-                            <PaperInput
-                                mode="outlined"
-                                label="Due Date (YYYY-MM-DD)"
-                                style={styles.input}
-                                value={form.dueDate}
-                                onChangeText={(text) => setForm({ ...form, dueDate: text })}
-                                theme={{ colors: { background: 'transparent' } }}
-                            />
-                            <PaperInput
-                                mode="outlined"
-                                label="Description (optional)"
-                                style={styles.input}
-                                value={form.description}
-                                onChangeText={(text) => setForm({ ...form, description: text })}
-                                theme={{ colors: { background: 'transparent' } }}
-                            />
-
-                            <View style={styles.modalButtons}>
-                                <Button mode="outlined" onPress={() => setModalVisible(false)} theme={{ colors: { primary: theme.colors.onSurfaceVariant, outline: theme.colors.surfaceVariant } }} style={{ marginRight: 10 }}>Cancel</Button>
-                                <Button mode="contained" onPress={handleCreate}>Create Bill</Button>
-                            </View>
-                        </ScrollView>
-                    </Surface>
+                                    <TouchableOpacity
+                                        style={{ alignSelf: 'center', marginTop: 20 }}
+                                        onPress={() => setModalVisible(false)}
+                                    >
+                                        <Text style={{ color: theme.colors.onSurfaceVariant, fontWeight: '600' }}>Cancel</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </ScrollView>
+                        </Surface>
+                    </KeyboardAvoidingView>
                 </View>
             </Modal>
         </View>
@@ -204,13 +276,31 @@ const styles = StyleSheet.create({
     statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
     actions: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, marginTop: 15 },
     actionBtn: { flex: 1, borderRadius: 8 },
-    modalOverlay: { flex: 1, justifyContent: 'center', padding: 20 },
-    modalContent: { borderRadius: 15, padding: 20, maxHeight: '85%' },
-    modalTitle: { fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
-    selectionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginBottom: 15 },
-    input: { marginBottom: 15 },
-    row: { flexDirection: 'row' },
-    modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 },
+    modalOverlay: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.85)', padding: 20 },
+    modalContent: { borderRadius: 24, overflow: 'hidden', maxHeight: '90%' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    selectionGridPremium: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
+    input: {
+        marginBottom: 16,
+        fontSize: 16,
+        backgroundColor: '#121212',
+    },
+    inputOutline: {
+        borderRadius: 12,
+    },
+    rowPremium: { flexDirection: 'row' },
+    postButton: {
+        borderRadius: 30,
+        elevation: 8,
+        marginTop: 10,
+        shadowColor: '#00C853',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 10,
+    },
+    buttonContent: {
+        paddingVertical: 10,
+    }
 });
 
 export default ManageMaintenance;

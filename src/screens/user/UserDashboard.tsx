@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, Card, Title, Paragraph, Button, ActivityIndicator, useTheme, Surface, Avatar, IconButton } from 'react-native-paper';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -9,6 +9,13 @@ const UserDashboard = () => {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const theme = useTheme();
+
+    const [refreshing, setRefreshing] = useState(false);
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        if (user?.society) await fetchDashboard();
+        setRefreshing(false);
+    }, [user?.society]);
 
     useEffect(() => {
         if (user?.society) {
@@ -39,7 +46,10 @@ const UserDashboard = () => {
     }
 
     return (
-        <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <ScrollView
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />}
+            contentContainerStyle={[styles.container, { backgroundColor: theme.colors.background }]}
+        >
             {!user?.society && (
                 <Surface style={[styles.warningBanner, { backgroundColor: '#331010', borderLeftColor: theme.colors.error }]} elevation={2}>
                     <Text style={[styles.warningText, { color: theme.colors.error }]}>⚠️ Your account is not linked to a society. Please contact your administrator.</Text>

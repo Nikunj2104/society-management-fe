@@ -1,14 +1,24 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import { Text, Button, useTheme, Card, Surface, Title } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
+import { Text, Button, useTheme, Card, Surface } from 'react-native-paper';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
+import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const AdminDashboard = () => {
     const { signOut, user } = useContext(AuthContext);
+    const navigation = useNavigation<any>();
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const theme = useTheme();
+
+    const [refreshing, setRefreshing] = useState(false);
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        await fetchDashboard();
+        setRefreshing(false);
+    }, []);
 
     useEffect(() => {
         fetchDashboard();
@@ -34,7 +44,10 @@ const AdminDashboard = () => {
     }
 
     return (
-        <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <ScrollView
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />}
+            contentContainerStyle={[styles.container, { backgroundColor: theme.colors.background }]}
+        >
             <View style={styles.header}>
                 <View>
                     <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.primary }]}>Admin Dashboard</Text>
@@ -72,6 +85,31 @@ const AdminDashboard = () => {
                 </Card>
             </View>
 
+            <Text variant="titleLarge" style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Quick Actions</Text>
+            <View style={styles.grid}>
+                <TouchableOpacity
+                    style={[styles.actionCard, { backgroundColor: theme.colors.surface }]}
+                    onPress={() => navigation.navigate('ManageMails')}
+                >
+                    <View style={[styles.iconContainer, { backgroundColor: 'rgba(0, 200, 83, 0.1)' }]}>
+                        <MaterialIcons name="email" size={28} color="#00C853" />
+                    </View>
+                    <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>Send Email</Text>
+                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>To anyone</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.actionCard, { backgroundColor: theme.colors.surface }]}
+                    onPress={() => navigation.navigate('Announcements')}
+                >
+                    <View style={[styles.iconContainer, { backgroundColor: 'rgba(33, 150, 243, 0.1)' }]}>
+                        <MaterialIcons name="campaign" size={28} color="#2196F3" />
+                    </View>
+                    <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>Broadcast</Text>
+                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>To residents</Text>
+                </TouchableOpacity>
+            </View>
+
             <Text variant="titleLarge" style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Upcoming Events</Text>
             {stats?.upcomingEvents?.length === 0
                 ? <Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>No upcoming events</Text>
@@ -104,6 +142,23 @@ const styles = StyleSheet.create({
     },
     cardLabel: { fontSize: 13, fontWeight: '600' },
     cardValue: { fontSize: 30, fontWeight: 'bold', marginTop: 8 },
+    actionCard: {
+        width: '48%',
+        padding: 20,
+        borderRadius: 16,
+        marginBottom: 15,
+        alignItems: 'flex-start',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    iconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
     sectionTitle: { fontWeight: 'bold', marginTop: 20, marginBottom: 12 },
     emptyText: { textAlign: 'center', marginTop: 10 },
     eventCard: {

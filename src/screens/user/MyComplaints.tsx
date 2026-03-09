@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
+import { View, FlatList, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, useTheme, Surface, TextInput as PaperInput, Button, Chip } from 'react-native-paper';
 import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
@@ -11,6 +11,13 @@ const MyComplaints = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const [form, setForm] = useState({ title: '', description: '', category: 'General' });
     const theme = useTheme();
+
+    const [refreshing, setRefreshing] = useState(false);
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        await fetchComplaints();
+        setRefreshing(false);
+    }, []);
 
     const categories = ['General', 'Maintenance', 'Security', 'Noise', 'Water', 'Electricity', 'Other'];
 
@@ -80,6 +87,7 @@ const MyComplaints = () => {
             </View>
 
             <FlatList
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />}
                 data={complaints}
                 keyExtractor={item => item._id}
                 ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 40, color: theme.colors.onSurfaceVariant }}>No complaints raised yet.</Text>}
@@ -106,25 +114,34 @@ const MyComplaints = () => {
             <Modal visible={modalVisible} animationType="slide" transparent>
                 <View style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
                     <Surface style={[styles.modal, { backgroundColor: theme.colors.background }]} elevation={5}>
-                        <Text variant="titleLarge" style={[styles.modalTitle, { color: theme.colors.onSurface }]}>Raise Complaint</Text>
+                        <Text variant="headlineSmall" style={[styles.modalTitle, { color: theme.colors.onSurface, fontWeight: 'bold' }]}>Raise Complaint</Text>
 
                         <PaperInput
-                            label="Title"
+                            placeholder="Title"
+                            placeholderTextColor={theme.colors.onSurfaceVariant}
                             mode="outlined"
                             style={styles.input}
+                            outlineStyle={styles.inputOutline}
                             value={form.title}
                             onChangeText={v => setForm({ ...form, title: v })}
-                            theme={{ colors: { background: 'transparent' } }}
+                            left={<PaperInput.Icon icon="pencil-outline" color={theme.colors.onSurfaceVariant} />}
+                            outlineColor={theme.colors.surfaceVariant}
+                            activeOutlineColor={theme.colors.primary}
+                            textColor={theme.colors.onSurface}
                         />
                         <PaperInput
-                            label="Describe the issue..."
+                            placeholder="Describe the issue..."
+                            placeholderTextColor={theme.colors.onSurfaceVariant}
                             mode="outlined"
-                            style={[styles.input, { height: 90 }]}
+                            style={[styles.input, { height: 90, paddingTop: 4 }]}
+                            outlineStyle={styles.inputOutline}
                             multiline
                             numberOfLines={3}
                             value={form.description}
                             onChangeText={v => setForm({ ...form, description: v })}
-                            theme={{ colors: { background: 'transparent' } }}
+                            outlineColor={theme.colors.surfaceVariant}
+                            activeOutlineColor={theme.colors.primary}
+                            textColor={theme.colors.onSurface}
                         />
 
                         <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 6 }}>Category</Text>
@@ -144,8 +161,26 @@ const MyComplaints = () => {
                         </View>
 
                         <View style={styles.modalBtns}>
-                            <Button mode="outlined" onPress={() => setModalVisible(false)} theme={{ colors: { primary: theme.colors.onSurfaceVariant, outline: theme.colors.surfaceVariant } }} style={{ marginRight: 10 }}>Cancel</Button>
-                            <Button mode="contained" onPress={submitComplaint}>Submit</Button>
+                            <Button
+                                mode="outlined"
+                                onPress={() => setModalVisible(false)}
+                                theme={{ colors: { primary: theme.colors.onSurfaceVariant, outline: theme.colors.surfaceVariant } }}
+                                style={[styles.cancelButton, { marginRight: 10 }]}
+                                contentStyle={styles.buttonContent}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                mode="contained"
+                                onPress={submitComplaint}
+                                style={styles.button}
+                                contentStyle={styles.buttonContent}
+                                buttonColor={theme.colors.primary}
+                                textColor={theme.colors.onPrimary}
+                                labelStyle={{ fontSize: 16, fontWeight: 'bold', letterSpacing: 1 }}
+                            >
+                                SUBMIT
+                            </Button>
                         </View>
                     </Surface>
                 </View>
@@ -163,11 +198,35 @@ const styles = StyleSheet.create({
     badgeText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
     responseBox: { padding: 10, borderRadius: 8, marginTop: 6 },
     backdrop: { flex: 1, justifyContent: 'center', padding: 20 },
-    modal: { borderRadius: 16, padding: 24 },
-    modalTitle: { fontWeight: 'bold', marginBottom: 12 },
-    input: { marginBottom: 12 },
-    categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 15 },
-    modalBtns: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 },
+    modal: { borderRadius: 24, padding: 24 },
+    modalTitle: { fontWeight: 'bold', marginBottom: 24 },
+    input: {
+        marginBottom: 16,
+        fontSize: 16,
+        backgroundColor: '#121212',
+    },
+    inputOutline: {
+        borderRadius: 12,
+    },
+    categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
+    modalBtns: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
+    cancelButton: {
+        flex: 1,
+        borderRadius: 30,
+        borderColor: '#333',
+    },
+    button: {
+        flex: 1,
+        borderRadius: 30,
+        elevation: 8,
+        shadowColor: '#00C853',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 10,
+    },
+    buttonContent: {
+        paddingVertical: 8,
+    },
 });
 
 export default MyComplaints;

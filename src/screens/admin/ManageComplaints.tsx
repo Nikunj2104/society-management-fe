@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity, Alert, Modal, ActivityIndicator } from 'react-native';
+import { View, FlatList, StyleSheet, TouchableOpacity, Alert, Modal, ActivityIndicator, RefreshControl, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { Text, useTheme, Surface, TextInput as PaperInput, Button, Chip } from 'react-native-paper';
 import api from '../../services/api';
 
@@ -10,6 +10,13 @@ const ManageComplaints = () => {
     const [response, setResponse] = useState('');
     const [status, setStatus] = useState('In Progress');
     const theme = useTheme();
+
+    const [refreshing, setRefreshing] = useState(false);
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        await fetchComplaints();
+        setRefreshing(false);
+    }, []);
 
     useEffect(() => { fetchComplaints(); }, []);
 
@@ -45,8 +52,11 @@ const ManageComplaints = () => {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-            <Text variant="headlineSmall" style={[styles.title, { color: theme.colors.primary }]}>Complaints</Text>
+            <View style={styles.header}>
+                <Text variant="headlineSmall" style={{ fontWeight: 'bold', color: theme.colors.primary }}>Complaints</Text>
+            </View>
             <FlatList
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />}
                 data={complaints}
                 keyExtractor={item => item._id}
                 ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 40, color: theme.colors.onSurfaceVariant }}>No complaints raised.</Text>}
@@ -67,50 +77,92 @@ const ManageComplaints = () => {
             />
 
             <Modal visible={!!selected} animationType="fade" transparent>
-                <View style={[styles.modalBackdrop, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
-                    <Surface style={[styles.modal, { backgroundColor: theme.colors.background }]} elevation={5}>
-                        <Text variant="titleLarge" style={[styles.modalTitle, { color: theme.colors.onSurface }]}>Respond to Complaint</Text>
-                        <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.onSurface }}>{selected?.title}</Text>
-                        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 15 }}>{selected?.description}</Text>
+                <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.85)' }]}>
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        style={{ width: '100%' }}
+                    >
+                        <Surface style={[styles.modalContent, { backgroundColor: theme.colors.background }]} elevation={5}>
+                            <ScrollView contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled">
+                                <View style={styles.modalHeader}>
+                                    <View>
+                                        <Text variant="headlineSmall" style={{ color: theme.colors.primary, fontWeight: '900', letterSpacing: -1 }}>
+                                            RESPOND
+                                        </Text>
+                                        <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                                            Address resident concerns.
+                                        </Text>
+                                    </View>
+                                    <TouchableOpacity onPress={() => setSelected(null)}>
+                                        <PaperInput.Icon icon="close" color={theme.colors.onSurfaceVariant} />
+                                    </TouchableOpacity>
+                                </View>
 
-                        <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 8 }}>Status Update</Text>
-                        <View style={styles.statusRow}>
-                            {['Open', 'In Progress', 'Resolved'].map(s => (
-                                <Chip
-                                    key={s}
-                                    mode="outlined"
-                                    selected={status === s}
-                                    onPress={() => setStatus(s)}
-                                    style={{
-                                        backgroundColor: status === s ? theme.colors.primaryContainer : 'transparent',
-                                        borderColor: status === s ? theme.colors.primary : theme.colors.surfaceVariant
-                                    }}
-                                    textStyle={{
-                                        color: status === s ? theme.colors.onPrimaryContainer : theme.colors.onSurface
-                                    }}
-                                >
-                                    {s}
-                                </Chip>
-                            ))}
-                        </View>
+                                <View style={styles.complaintDetails}>
+                                    <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.onSurface }}>{selected?.title}</Text>
+                                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>{selected?.description}</Text>
+                                </View>
 
-                        <PaperInput
-                            label="Your Response"
-                            mode="outlined"
-                            style={[styles.input, { height: 90, marginBottom: 15 }]}
-                            placeholder="Write your response..."
-                            multiline
-                            numberOfLines={3}
-                            value={response}
-                            onChangeText={setResponse}
-                            theme={{ colors: { background: 'transparent' } }}
-                        />
+                                <View style={{ marginTop: 20 }}>
+                                    <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 15, fontWeight: '700' }}>UPDATE STATUS</Text>
+                                    <View style={styles.statusGridPremium}>
+                                        {['Open', 'In Progress', 'Resolved'].map(s => (
+                                            <Chip
+                                                key={s}
+                                                mode="outlined"
+                                                selected={status === s}
+                                                onPress={() => setStatus(s)}
+                                                style={{
+                                                    backgroundColor: status === s ? theme.colors.primary : '#1a1a1a',
+                                                    borderColor: status === s ? theme.colors.primary : '#333'
+                                                }}
+                                                textStyle={{
+                                                    color: status === s ? theme.colors.onPrimary : theme.colors.onSurface
+                                                }}
+                                            >
+                                                {s}
+                                            </Chip>
+                                        ))}
+                                    </View>
 
-                        <View style={styles.modalBtns}>
-                            <Button mode="outlined" onPress={() => setSelected(null)} theme={{ colors: { primary: theme.colors.onSurfaceVariant, outline: theme.colors.surfaceVariant } }} style={{ marginRight: 10 }}>Cancel</Button>
-                            <Button mode="contained" onPress={submitResponse}>Send Response</Button>
-                        </View>
-                    </Surface>
+                                    <PaperInput
+                                        placeholder="Write your response to the resident..."
+                                        placeholderTextColor={theme.colors.onSurfaceVariant}
+                                        mode="outlined"
+                                        multiline
+                                        numberOfLines={5}
+                                        style={[styles.input, { height: 120, paddingTop: 10 }]}
+                                        outlineStyle={styles.inputOutline}
+                                        value={response}
+                                        onChangeText={setResponse}
+                                        left={<PaperInput.Icon icon="comment-text-outline" color={theme.colors.onSurfaceVariant} />}
+                                        outlineColor={theme.colors.surfaceVariant}
+                                        activeOutlineColor={theme.colors.primary}
+                                        textColor={theme.colors.onSurface}
+                                    />
+
+                                    <Button
+                                        mode="contained"
+                                        onPress={submitResponse}
+                                        style={styles.postButton}
+                                        contentStyle={styles.buttonContent}
+                                        buttonColor={theme.colors.primary}
+                                        textColor={theme.colors.onPrimary}
+                                        labelStyle={{ fontSize: 16, fontWeight: 'bold', letterSpacing: 1 }}
+                                    >
+                                        SEND RESPONSE
+                                    </Button>
+
+                                    <TouchableOpacity
+                                        style={{ alignSelf: 'center', marginTop: 20 }}
+                                        onPress={() => setSelected(null)}
+                                    >
+                                        <Text style={{ color: theme.colors.onSurfaceVariant, fontWeight: '600' }}>Cancel</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </ScrollView>
+                        </Surface>
+                    </KeyboardAvoidingView>
                 </View>
             </Modal>
         </View>
@@ -119,17 +171,43 @@ const ManageComplaints = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 20, paddingTop: 60 },
-    title: { fontWeight: 'bold', marginBottom: 20 },
+    header: { marginBottom: 20 },
     card: { padding: 15, borderRadius: 10, marginBottom: 12 },
     cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
     badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
     badgeText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-    modalBackdrop: { flex: 1, justifyContent: 'center', padding: 20 },
-    modal: { borderRadius: 16, padding: 24 },
-    modalTitle: { fontWeight: 'bold', marginBottom: 12 },
-    statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 15 },
-    input: { fontSize: 15 },
-    modalBtns: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 },
+    modalOverlay: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.85)', padding: 20 },
+    modalContent: { borderRadius: 24, overflow: 'hidden', maxHeight: '90%' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    complaintDetails: {
+        backgroundColor: '#1a1a1a',
+        padding: 15,
+        borderRadius: 12,
+        marginTop: 20,
+        borderWidth: 1,
+        borderColor: '#333'
+    },
+    statusGridPremium: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
+    input: {
+        marginBottom: 16,
+        fontSize: 16,
+        backgroundColor: '#121212',
+    },
+    inputOutline: {
+        borderRadius: 12,
+    },
+    postButton: {
+        borderRadius: 30,
+        elevation: 8,
+        marginTop: 10,
+        shadowColor: '#00C853',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 10,
+    },
+    buttonContent: {
+        paddingVertical: 10,
+    },
 });
 
 export default ManageComplaints;

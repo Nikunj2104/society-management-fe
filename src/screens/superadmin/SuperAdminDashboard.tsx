@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, ScrollView, RefreshControl } from 'react-native';
 import { Text, Button, useTheme, Card, Title, Surface } from 'react-native-paper';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -9,6 +9,13 @@ const SuperAdminDashboard = () => {
     const [analytics, setAnalytics] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const theme = useTheme();
+
+    const [refreshing, setRefreshing] = useState(false);
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        await fetchAnalytics();
+        setRefreshing(false);
+    }, []);
 
     useEffect(() => {
         fetchAnalytics();
@@ -34,7 +41,10 @@ const SuperAdminDashboard = () => {
     }
 
     return (
-        <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <ScrollView
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />}
+            contentContainerStyle={[styles.container, { backgroundColor: theme.colors.background }]}
+        >
             <View style={styles.header}>
                 <View>
                     <Text variant="headlineMedium" style={[styles.title, { color: theme.colors.primary }]}>Super Admin Panel</Text>
