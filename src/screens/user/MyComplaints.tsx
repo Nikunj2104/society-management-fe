@@ -111,7 +111,7 @@ const MyComplaints = () => {
                 )}
             />
 
-            <Modal visible={modalVisible} animationType="slide" transparent>
+            <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
                 <View style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
                     <Surface style={[styles.modal, { backgroundColor: theme.colors.background }]} elevation={5}>
                         <Text variant="headlineSmall" style={[styles.modalTitle, { color: theme.colors.onSurface, fontWeight: 'bold' }]}>Raise Complaint</Text>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, Modal, RefreshControl, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
-import { Text, useTheme, Surface, TextInput as PaperInput, Button } from 'react-native-paper';
+import { Text, useTheme, Surface, TextInput as PaperInput, Button, IconButton } from 'react-native-paper';
 import api from '../../services/api';
 
 const ManageResidents = () => {
@@ -8,6 +8,7 @@ const ManageResidents = () => {
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
     const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', flatNumber: '' });
+    const [errors, setErrors] = useState<any>({});
     const theme = useTheme();
 
     const [refreshing, setRefreshing] = useState(false);
@@ -36,11 +37,17 @@ const ManageResidents = () => {
     };
 
     const addResident = async () => {
-        if (!form.name || !form.email || !form.password) {
-            Alert.alert('Required', 'Name, Email and Password are required');
+        const newErrors: any = {};
+        if (!form.name.trim()) newErrors.name = 'Name is required';
+        if (!form.email.trim()) newErrors.email = 'Email is required';
+        if (!form.password.trim()) newErrors.password = 'Password is required';
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
             return;
         }
 
+        setErrors({});
         try {
             await api.post('/admin/residents', form);
             setModalVisible(false);
@@ -63,6 +70,8 @@ const ManageResidents = () => {
             }
         ]);
     };
+
+    const renderError = (msg: string) => msg ? <Text style={styles.errorText}>{msg}</Text> : null;
 
     if (loading) return (
         <View style={[styles.container, { backgroundColor: theme.colors.background, justifyContent: 'center' }]}>
@@ -104,7 +113,7 @@ const ManageResidents = () => {
                 )}
             />
 
-            <Modal visible={modalVisible} animationType="fade" transparent>
+            <Modal visible={modalVisible} animationType="fade" transparent onRequestClose={() => setModalVisible(false)}>
                 <View style={[styles.modalBackdrop, { backgroundColor: 'rgba(0,0,0,0.85)' }]}>
                     <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -121,27 +130,27 @@ const ManageResidents = () => {
                                             Add a member to the society.
                                         </Text>
                                     </View>
-                                    <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                        <PaperInput.Icon icon="close" color={theme.colors.onSurfaceVariant} />
-                                    </TouchableOpacity>
+                                    <IconButton icon="close" size={24} iconColor={theme.colors.onSurfaceVariant} onPress={() => setModalVisible(false)} />
                                 </View>
 
                                 <View style={{ marginTop: 30 }}>
                                     <PaperInput
-                                        placeholder="Full Name"
+                                        placeholder="Full Name *"
                                         placeholderTextColor={theme.colors.onSurfaceVariant}
                                         mode="outlined"
                                         style={styles.input}
                                         outlineStyle={styles.inputOutline}
                                         value={form.name}
                                         onChangeText={val => setForm({ ...form, name: val })}
-                                        left={<PaperInput.Icon icon="account-outline" color={theme.colors.onSurfaceVariant} />}
-                                        outlineColor={theme.colors.surfaceVariant}
-                                        activeOutlineColor={theme.colors.primary}
+                                        left={<PaperInput.Icon icon="account-outline" color={errors.name ? theme.colors.error : theme.colors.onSurfaceVariant} />}
+                                        outlineColor={errors.name ? theme.colors.error : theme.colors.surfaceVariant}
+                                        activeOutlineColor={errors.name ? theme.colors.error : theme.colors.primary}
                                         textColor={theme.colors.onSurface}
+                                        error={!!errors.name}
                                     />
+                                    {renderError(errors.name)}
                                     <PaperInput
-                                        placeholder="Email Address"
+                                        placeholder="Email Address *"
                                         placeholderTextColor={theme.colors.onSurfaceVariant}
                                         mode="outlined"
                                         style={styles.input}
@@ -150,13 +159,15 @@ const ManageResidents = () => {
                                         keyboardType="email-address"
                                         value={form.email}
                                         onChangeText={val => setForm({ ...form, email: val })}
-                                        left={<PaperInput.Icon icon="email-outline" color={theme.colors.onSurfaceVariant} />}
-                                        outlineColor={theme.colors.surfaceVariant}
-                                        activeOutlineColor={theme.colors.primary}
+                                        left={<PaperInput.Icon icon="email-outline" color={errors.email ? theme.colors.error : theme.colors.onSurfaceVariant} />}
+                                        outlineColor={errors.email ? theme.colors.error : theme.colors.surfaceVariant}
+                                        activeOutlineColor={errors.email ? theme.colors.error : theme.colors.primary}
                                         textColor={theme.colors.onSurface}
+                                        error={!!errors.email}
                                     />
+                                    {renderError(errors.email)}
                                     <PaperInput
-                                        placeholder="Temporary Password"
+                                        placeholder="Temporary Password *"
                                         placeholderTextColor={theme.colors.onSurfaceVariant}
                                         mode="outlined"
                                         style={styles.input}
@@ -164,11 +175,13 @@ const ManageResidents = () => {
                                         secureTextEntry
                                         value={form.password}
                                         onChangeText={val => setForm({ ...form, password: val })}
-                                        left={<PaperInput.Icon icon="lock-outline" color={theme.colors.onSurfaceVariant} />}
-                                        outlineColor={theme.colors.surfaceVariant}
-                                        activeOutlineColor={theme.colors.primary}
+                                        left={<PaperInput.Icon icon="lock-outline" color={errors.password ? theme.colors.error : theme.colors.onSurfaceVariant} />}
+                                        outlineColor={errors.password ? theme.colors.error : theme.colors.surfaceVariant}
+                                        activeOutlineColor={errors.password ? theme.colors.error : theme.colors.primary}
                                         textColor={theme.colors.onSurface}
+                                        error={!!errors.password}
                                     />
+                                    {renderError(errors.password)}
                                     <PaperInput
                                         placeholder="Phone Number"
                                         placeholderTextColor={theme.colors.onSurfaceVariant}
@@ -251,6 +264,14 @@ const styles = StyleSheet.create({
     },
     buttonContent: {
         paddingVertical: 10,
+    },
+    errorText: {
+        color: '#ff4444',
+        fontSize: 12,
+        marginTop: -12,
+        marginBottom: 12,
+        marginLeft: 4,
+        fontWeight: '600'
     },
 });
 

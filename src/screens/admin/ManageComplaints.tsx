@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity, Alert, Modal, ActivityIndicator, RefreshControl, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
-import { Text, useTheme, Surface, TextInput as PaperInput, Button, Chip } from 'react-native-paper';
+import { Text, useTheme, Surface, TextInput as PaperInput, Button, Chip, IconButton } from 'react-native-paper';
 import api from '../../services/api';
 
 const ManageComplaints = () => {
@@ -76,7 +76,7 @@ const ManageComplaints = () => {
                 )}
             />
 
-            <Modal visible={!!selected} animationType="fade" transparent>
+            <Modal visible={!!selected} animationType="fade" transparent onRequestClose={() => setSelected(null)}>
                 <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.85)' }]}>
                     <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -93,9 +93,7 @@ const ManageComplaints = () => {
                                             Address resident concerns.
                                         </Text>
                                     </View>
-                                    <TouchableOpacity onPress={() => setSelected(null)}>
-                                        <PaperInput.Icon icon="close" color={theme.colors.onSurfaceVariant} />
-                                    </TouchableOpacity>
+                                    <IconButton icon="close" size={24} iconColor={theme.colors.onSurfaceVariant} onPress={() => setSelected(null)} />
                                 </View>
 
                                 <View style={styles.complaintDetails}>

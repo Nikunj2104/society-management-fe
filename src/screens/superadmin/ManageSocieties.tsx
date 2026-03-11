@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, Modal, ScrollView, KeyboardAvoidingView, Platform, RefreshControl } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Text, useTheme, TextInput as PaperInput, Surface, Button } from 'react-native-paper';
+import { Text, useTheme, TextInput as PaperInput, Surface, Button, IconButton } from 'react-native-paper';
 import api from '../../services/api';
 
 const ManageSocieties = () => {
     const [societies, setSocieties] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
     const theme = useTheme();
 
     const [modalVisible, setModalVisible] = useState(false);
@@ -20,37 +22,67 @@ const ManageSocieties = () => {
         name: '', email: '', password: '', phone: ''
     });
 
+    const [formErrors, setFormErrors] = useState<any>({});
+    const [adminFormErrors, setAdminFormErrors] = useState<any>({});
+
+    const handleCloseSocietyModal = () => {
+        setModalVisible(false);
+        setForm({ name: '', address: '', city: '', state: '', zipCode: '', numberOfUnits: '' });
+        setFormErrors({});
+    };
+
+    const handleCloseAdminModal = () => {
+        setAdminModalVisible(false);
+        setAdminForm({ name: '', email: '', password: '', phone: '' });
+        setAdminFormErrors({});
+        setSelectedSociety(null);
+    };
+
     useEffect(() => {
         fetchSocieties();
     }, []);
 
     const fetchSocieties = async () => {
         try {
+            setError(null);
             const response = await api.get('/super-admin/societies');
-            setSocieties(response.data);
-        } catch (error) {
-            console.error('Failed to load societies', error);
+            setSocieties(Array.isArray(response.data) ? response.data : []);
+        } catch (err: any) {
+            console.error('Failed to load societies', err);
+            setError(err.response?.data?.message || 'Unauthorized or connection failed.');
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchSocieties();
+    };
+
     const handleCreateSociety = async () => {
+        const errors: any = {};
+        if (!form.name.trim()) errors.name = 'Society name is required';
+        if (!form.city.trim()) errors.city = 'City is required';
+        if (!form.state.trim()) errors.state = 'State is required';
+        if (!form.numberOfUnits.trim()) errors.numberOfUnits = 'Required';
+
+        if (Object.keys(errors).length > 0) {
+            setFormErrors(errors);
+            return;
+        }
+
+        setFormErrors({});
         const trimmedForm = {
             name: form.name.trim(), address: form.address.trim(), city: form.city.trim(),
             state: form.state.trim(), zipCode: form.zipCode.trim(), numberOfUnits: form.numberOfUnits.trim(),
         };
 
-        if (!trimmedForm.name || !trimmedForm.city || !trimmedForm.state || !trimmedForm.numberOfUnits) {
-            Alert.alert('Error', 'Please fill all required fields');
-            return;
-        }
-
         try {
             await api.post('/super-admin/societies', { ...trimmedForm, numberOfUnits: parseInt(trimmedForm.numberOfUnits) });
             Alert.alert('Success', 'Society created successfully');
-            setModalVisible(false);
-            setForm({ name: '', address: '', city: '', state: '', zipCode: '', numberOfUnits: '' });
+            handleCloseSocietyModal();
             fetchSocieties();
         } catch (error: any) {
             Alert.alert('Error', error.response?.data?.message || 'Failed to create society');
@@ -58,21 +90,26 @@ const ManageSocieties = () => {
     };
 
     const handleAddAdmin = async () => {
+        const errors: any = {};
+        if (!adminForm.name.trim()) errors.name = 'Admin name is required';
+        if (!adminForm.email.trim()) errors.email = 'Email is required';
+        if (!adminForm.password.trim()) errors.password = 'Password is required';
+        
+        if (Object.keys(errors).length > 0) {
+            setAdminFormErrors(errors);
+            return;
+        }
+
+        setAdminFormErrors({});
         const trimmedAdminForm = {
             name: adminForm.name.trim(), email: adminForm.email.trim().toLowerCase(),
             password: adminForm.password.trim(), phone: adminForm.phone.trim()
         };
 
-        if (!trimmedAdminForm.name || !trimmedAdminForm.email || !trimmedAdminForm.password || !selectedSociety) {
-            Alert.alert('Error', 'Please fill all required fields (Name, Email, Password)');
-            return;
-        }
-
         try {
             await api.post('/super-admin/admins', { ...trimmedAdminForm, societyId: selectedSociety._id });
             Alert.alert('Success', 'Admin added successfully');
-            setAdminModalVisible(false);
-            setAdminForm({ name: '', email: '', password: '', phone: '' });
+            handleCloseAdminModal();
         } catch (error: any) {
             Alert.alert('Error', error.response?.data?.message || 'Failed to add admin');
         }
@@ -95,6 +132,8 @@ const ManageSocieties = () => {
             </View>
         );
     }
+
+    const renderError = (msg: string) => msg ? <Text style={styles.errorText}>{msg}</Text> : null;
 
     const renderItem = ({ item }: { item: any }) => (
         <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={2}>
@@ -135,11 +174,28 @@ const ManageSocieties = () => {
                 keyExtractor={(item) => item._id}
                 renderItem={renderItem}
                 contentContainerStyle={{ paddingBottom: 20 }}
-                ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 20, color: theme.colors.onSurfaceVariant }}>No societies created yet.</Text>}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        {error ? (
+                            <>
+                                <MaterialIcons name="error-outline" size={48} color={theme.colors.error} />
+                                <Text variant="titleMedium" style={{ color: theme.colors.error, marginTop: 10, textAlign: 'center' }}>
+                                    {error}
+                                </Text>
+                                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4, textAlign: 'center' }}>
+                                    Your session might have expired. Please try logout and login.
+                                </Text>
+                            </>
+                        ) : (
+                            <Text style={{ textAlign: 'center', color: theme.colors.onSurfaceVariant }}>No societies created yet.</Text>
+                        )}
+                    </View>
+                }
             />
 
             {/* Create Society Modal */}
-            <Modal visible={modalVisible} animationType="fade" transparent={true}>
+            <Modal visible={modalVisible} animationType="fade" transparent={true} onRequestClose={handleCloseSocietyModal}>
                 <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.85)' }]}>
                     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
                         <Surface style={[styles.modalContent, { backgroundColor: theme.colors.background }]} elevation={5}>
@@ -153,25 +209,26 @@ const ManageSocieties = () => {
                                             Onboard a new community.
                                         </Text>
                                     </View>
-                                    <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                        <PaperInput.Icon icon="close" color={theme.colors.onSurfaceVariant} />
-                                    </TouchableOpacity>
+                                    <IconButton icon="close" size={24} iconColor={theme.colors.onSurfaceVariant} onPress={handleCloseSocietyModal} />
                                 </View>
 
                                 <View style={{ marginTop: 30 }}>
                                     <PaperInput
-                                        placeholder="Society Name"
+                                        placeholder="Society Name *"
                                         placeholderTextColor={theme.colors.onSurfaceVariant}
                                         mode="outlined"
-                                        style={styles.input}
+                                        style={[styles.input, formErrors.name && styles.inputError]}
                                         outlineStyle={styles.inputOutline}
                                         value={form.name}
                                         onChangeText={t => setForm({ ...form, name: t })}
-                                        left={<PaperInput.Icon icon="office-building" color={theme.colors.onSurfaceVariant} />}
-                                        outlineColor={theme.colors.surfaceVariant}
-                                        activeOutlineColor={theme.colors.primary}
+                                        left={<PaperInput.Icon icon="office-building" color={formErrors.name ? theme.colors.error : theme.colors.onSurfaceVariant} />}
+                                        outlineColor={formErrors.name ? theme.colors.error : theme.colors.surfaceVariant}
+                                        activeOutlineColor={formErrors.name ? theme.colors.error : theme.colors.primary}
                                         textColor={theme.colors.onSurface}
+                                        error={!!formErrors.name}
                                     />
+                                    {renderError(formErrors.name)}
+
                                     <PaperInput
                                         placeholder="Full Address"
                                         placeholderTextColor={theme.colors.onSurfaceVariant}
@@ -187,51 +244,67 @@ const ManageSocieties = () => {
                                         activeOutlineColor={theme.colors.primary}
                                         textColor={theme.colors.onSurface}
                                     />
+
                                     <View style={styles.rowPremium}>
-                                        <PaperInput
-                                            placeholder="City"
-                                            mode="outlined"
-                                            style={[styles.input, { flex: 1, marginRight: 10 }]}
-                                            outlineStyle={styles.inputOutline}
-                                            value={form.city}
-                                            onChangeText={t => setForm({ ...form, city: t })}
-                                            outlineColor={theme.colors.surfaceVariant}
-                                            activeOutlineColor={theme.colors.primary}
-                                        />
-                                        <PaperInput
-                                            placeholder="State"
-                                            mode="outlined"
-                                            style={[styles.input, { flex: 1 }]}
-                                            outlineStyle={styles.inputOutline}
-                                            value={form.state}
-                                            onChangeText={t => setForm({ ...form, state: t })}
-                                            outlineColor={theme.colors.surfaceVariant}
-                                            activeOutlineColor={theme.colors.primary}
-                                        />
+                                        <View style={{ flex: 1, marginRight: 10 }}>
+                                            <PaperInput
+                                                placeholder="City *"
+                                                mode="outlined"
+                                                style={[styles.input, formErrors.city && styles.inputError]}
+                                                outlineStyle={styles.inputOutline}
+                                                value={form.city}
+                                                onChangeText={t => setForm({ ...form, city: t })}
+                                                outlineColor={formErrors.city ? theme.colors.error : theme.colors.surfaceVariant}
+                                                activeOutlineColor={formErrors.city ? theme.colors.error : theme.colors.primary}
+                                                error={!!formErrors.city}
+                                            />
+                                            {renderError(formErrors.city)}
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <PaperInput
+                                                placeholder="State *"
+                                                mode="outlined"
+                                                style={[styles.input, formErrors.state && styles.inputError]}
+                                                outlineStyle={styles.inputOutline}
+                                                value={form.state}
+                                                onChangeText={t => setForm({ ...form, state: t })}
+                                                outlineColor={formErrors.state ? theme.colors.error : theme.colors.surfaceVariant}
+                                                activeOutlineColor={formErrors.state ? theme.colors.error : theme.colors.primary}
+                                                error={!!formErrors.state}
+                                            />
+                                            {renderError(formErrors.state)}
+                                        </View>
                                     </View>
+
                                     <View style={styles.rowPremium}>
-                                        <PaperInput
-                                            placeholder="Zip"
-                                            keyboardType="numeric"
-                                            mode="outlined"
-                                            style={[styles.input, { flex: 1, marginRight: 10 }]}
-                                            outlineStyle={styles.inputOutline}
-                                            value={form.zipCode}
-                                            onChangeText={t => setForm({ ...form, zipCode: t })}
-                                            outlineColor={theme.colors.surfaceVariant}
-                                            activeOutlineColor={theme.colors.primary}
-                                        />
-                                        <PaperInput
-                                            placeholder="Units"
-                                            keyboardType="numeric"
-                                            mode="outlined"
-                                            style={[styles.input, { flex: 1 }]}
-                                            outlineStyle={styles.inputOutline}
-                                            value={form.numberOfUnits}
-                                            onChangeText={t => setForm({ ...form, numberOfUnits: t })}
-                                            outlineColor={theme.colors.surfaceVariant}
-                                            activeOutlineColor={theme.colors.primary}
-                                        />
+                                        <View style={{ flex: 1, marginRight: 10 }}>
+                                            <PaperInput
+                                                placeholder="Zip Code"
+                                                keyboardType="numeric"
+                                                mode="outlined"
+                                                style={styles.input}
+                                                outlineStyle={styles.inputOutline}
+                                                value={form.zipCode}
+                                                onChangeText={t => setForm({ ...form, zipCode: t })}
+                                                outlineColor={theme.colors.surfaceVariant}
+                                                activeOutlineColor={theme.colors.primary}
+                                            />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <PaperInput
+                                                placeholder="Units *"
+                                                keyboardType="numeric"
+                                                mode="outlined"
+                                                style={[styles.input, formErrors.numberOfUnits && styles.inputError]}
+                                                outlineStyle={styles.inputOutline}
+                                                value={form.numberOfUnits}
+                                                onChangeText={t => setForm({ ...form, numberOfUnits: t })}
+                                                outlineColor={formErrors.numberOfUnits ? theme.colors.error : theme.colors.surfaceVariant}
+                                                activeOutlineColor={formErrors.numberOfUnits ? theme.colors.error : theme.colors.primary}
+                                                error={!!formErrors.numberOfUnits}
+                                            />
+                                            {renderError(formErrors.numberOfUnits)}
+                                        </View>
                                     </View>
 
                                     <Button
@@ -248,7 +321,7 @@ const ManageSocieties = () => {
 
                                     <TouchableOpacity
                                         style={{ alignSelf: 'center', marginTop: 20 }}
-                                        onPress={() => setModalVisible(false)}
+                                        onPress={handleCloseSocietyModal}
                                     >
                                         <Text style={{ color: theme.colors.onSurfaceVariant, fontWeight: '600' }}>Cancel</Text>
                                     </TouchableOpacity>
@@ -260,7 +333,7 @@ const ManageSocieties = () => {
             </Modal>
 
             {/* Add Admin Modal */}
-            <Modal visible={adminModalVisible} animationType="fade" transparent={true}>
+            <Modal visible={adminModalVisible} animationType="fade" transparent={true} onRequestClose={handleCloseAdminModal}>
                 <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.85)' }]}>
                     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
                         <Surface style={[styles.modalContent, { backgroundColor: theme.colors.background }]} elevation={5}>
@@ -274,32 +347,39 @@ const ManageSocieties = () => {
                                             Assign manager for {selectedSociety?.name}.
                                         </Text>
                                     </View>
-                                    <TouchableOpacity onPress={() => setAdminModalVisible(false)}>
-                                        <PaperInput.Icon icon="close" color={theme.colors.onSurfaceVariant} />
-                                    </TouchableOpacity>
+                                    <IconButton icon="close" size={24} iconColor={theme.colors.onSurfaceVariant} onPress={handleCloseAdminModal} />
                                 </View>
 
                                 <View style={{ marginTop: 30 }}>
                                     <PaperInput
-                                        placeholder="Admin Full Name"
+                                        placeholder="Admin Full Name *"
                                         mode="outlined"
-                                        style={styles.input}
+                                        style={[styles.input, adminFormErrors.name && styles.inputError]}
                                         outlineStyle={styles.inputOutline}
                                         value={adminForm.name}
                                         onChangeText={t => setAdminForm({ ...adminForm, name: t })}
-                                        left={<PaperInput.Icon icon="account" color={theme.colors.onSurfaceVariant} />}
+                                        left={<PaperInput.Icon icon="account" color={adminFormErrors.name ? theme.colors.error : theme.colors.onSurfaceVariant} />}
+                                        error={!!adminFormErrors.name}
                                     />
+                                    {renderError(adminFormErrors.name)}
+
                                     <PaperInput
-                                        placeholder="Email Address"
+                                        placeholder="Email Address *"
                                         mode="outlined"
                                         keyboardType="email-address"
                                         autoCapitalize="none"
-                                        style={styles.input}
+                                        autoComplete="off"
+                                        textContentType="none"
+                                        importantForAutofill="noExcludeDescendants"
+                                        style={[styles.input, adminFormErrors.email && styles.inputError]}
                                         outlineStyle={styles.inputOutline}
                                         value={adminForm.email}
                                         onChangeText={t => setAdminForm({ ...adminForm, email: t })}
-                                        left={<PaperInput.Icon icon="email" color={theme.colors.onSurfaceVariant} />}
+                                        left={<PaperInput.Icon icon="email" color={adminFormErrors.email ? theme.colors.error : theme.colors.onSurfaceVariant} />}
+                                        error={!!adminFormErrors.email}
                                     />
+                                    {renderError(adminFormErrors.email)}
+
                                     <PaperInput
                                         placeholder="Phone Number"
                                         mode="outlined"
@@ -310,16 +390,22 @@ const ManageSocieties = () => {
                                         onChangeText={t => setAdminForm({ ...adminForm, phone: t })}
                                         left={<PaperInput.Icon icon="phone" color={theme.colors.onSurfaceVariant} />}
                                     />
+
                                     <PaperInput
-                                        placeholder="Secure Password"
+                                        placeholder="Secure Password *"
                                         mode="outlined"
                                         secureTextEntry
-                                        style={styles.input}
+                                        autoComplete="new-password"
+                                        textContentType="none"
+                                        importantForAutofill="noExcludeDescendants"
+                                        style={[styles.input, adminFormErrors.password && styles.inputError]}
                                         outlineStyle={styles.inputOutline}
                                         value={adminForm.password}
                                         onChangeText={t => setAdminForm({ ...adminForm, password: t })}
-                                        left={<PaperInput.Icon icon="lock" color={theme.colors.onSurfaceVariant} />}
+                                        left={<PaperInput.Icon icon="lock" color={adminFormErrors.password ? theme.colors.error : theme.colors.onSurfaceVariant} />}
+                                        error={!!adminFormErrors.password}
                                     />
+                                    {renderError(adminFormErrors.password)}
 
                                     <Button
                                         mode="contained"
@@ -330,12 +416,12 @@ const ManageSocieties = () => {
                                         textColor={theme.colors.onPrimary}
                                         labelStyle={{ fontSize: 16, fontWeight: 'bold', letterSpacing: 1 }}
                                     >
-                                        APPOINT ADMIN
+                                        Add Admin
                                     </Button>
 
                                     <TouchableOpacity
                                         style={{ alignSelf: 'center', marginTop: 20 }}
-                                        onPress={() => setAdminModalVisible(false)}
+                                        onPress={handleCloseAdminModal}
                                     >
                                         <Text style={{ color: theme.colors.onSurfaceVariant, fontWeight: '600' }}>Cancel</Text>
                                     </TouchableOpacity>
@@ -389,6 +475,18 @@ const styles = StyleSheet.create({
     buttonContent: {
         paddingVertical: 10,
     },
+    emptyContainer: { marginTop: 40, alignItems: 'center', paddingHorizontal: 20 },
+    errorText: {
+        color: '#ff4444',
+        fontSize: 12,
+        marginTop: -12,
+        marginBottom: 12,
+        marginLeft: 4,
+        fontWeight: '600'
+    },
+    inputError: {
+        marginBottom: 16,
+    }
 });
 
 export default ManageSocieties;

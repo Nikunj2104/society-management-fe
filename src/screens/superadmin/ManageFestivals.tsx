@@ -15,6 +15,7 @@ const ManageFestivals = () => {
     const [itemToDelete, setItemToDelete] = useState<number | null>(null);
     const [snackbarVisible, setSnackbarVisible] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
     const showSnackbar = (msg: string) => {
         setSnackbarMessage(msg);
@@ -37,7 +38,23 @@ const ManageFestivals = () => {
         }
     };
 
+    const validateForm = () => {
+        const errors: Record<string, string> = {};
+        if (!newFestival.name?.trim()) errors.name = 'Festival name is required';
+        if (!newFestival.theme?.trim()) errors.theme = 'Theme key is required';
+        if (!newFestival.message?.trim()) errors.message = 'Message content is required';
+        if (!newFestival.date?.trim()) errors.date = 'Date/Timing is required';
+
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
     const handleSave = async () => {
+        if (!validateForm()) {
+            showSnackbar('Please fill all required fields');
+            return;
+        }
+
         try {
             // Transform emojis string into array for saving
             const payload = {
@@ -177,22 +194,37 @@ const ManageFestivals = () => {
                         mode="outlined"
                         style={styles.input}
                         value={newFestival.name || ''}
-                        onChangeText={(text) => setNewFestival({ ...newFestival, name: text })}
+                        onChangeText={(text) => {
+                            setNewFestival({ ...newFestival, name: text });
+                            if (formErrors.name) setFormErrors({ ...formErrors, name: '' });
+                        }}
+                        error={!!formErrors.name}
                     />
+                    {formErrors.name ? <Text style={styles.errorText}>{formErrors.name}</Text> : null}
                     <TextInput
                         label="Theme Key (e.g., diwali, ocean, neon)"
                         mode="outlined"
                         style={styles.input}
                         value={newFestival.theme || ''}
-                        onChangeText={(text) => setNewFestival({ ...newFestival, theme: text })}
+                        onChangeText={(text) => {
+                            setNewFestival({ ...newFestival, theme: text });
+                            if (formErrors.theme) setFormErrors({ ...formErrors, theme: '' });
+                        }}
+                        error={!!formErrors.theme}
                     />
+                    {formErrors.theme ? <Text style={styles.errorText}>{formErrors.theme}</Text> : null}
                     <TextInput
                         label="Message"
                         mode="outlined"
                         style={styles.input}
                         value={newFestival.message || ''}
-                        onChangeText={(text) => setNewFestival({ ...newFestival, message: text })}
+                        onChangeText={(text) => {
+                            setNewFestival({ ...newFestival, message: text });
+                            if (formErrors.message) setFormErrors({ ...formErrors, message: '' });
+                        }}
+                        error={!!formErrors.message}
                     />
+                    {formErrors.message ? <Text style={styles.errorText}>{formErrors.message}</Text> : null}
                     <TextInput
                         label="Emojis (comma separated)"
                         mode="outlined"
@@ -208,8 +240,13 @@ const ManageFestivals = () => {
                         mode="outlined"
                         style={styles.input}
                         value={newFestival.date || ''}
-                        onChangeText={(text) => setNewFestival({ ...newFestival, date: text })}
+                        onChangeText={(text) => {
+                            setNewFestival({ ...newFestival, date: text });
+                            if (formErrors.date) setFormErrors({ ...formErrors, date: '' });
+                        }}
+                        error={!!formErrors.date}
                     />
+                    {formErrors.date ? <Text style={styles.errorText}>{formErrors.date}</Text> : null}
 
                     <View style={{ flexDirection: 'row', gap: 10 }}>
                         <TextInput
@@ -308,6 +345,14 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderBottomWidth: 1,
         borderBottomColor: '#333'
+    },
+    errorText: {
+        color: '#ff4444',
+        fontSize: 12,
+        marginTop: -10,
+        marginBottom: 10,
+        marginLeft: 4,
+        fontWeight: '600'
     }
 });
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator, ScrollView, RefreshControl, KeyboardAvoidingView, Platform } from 'react-native';
-import { Text, useTheme, Surface, TextInput as PaperInput, Button, Chip } from 'react-native-paper';
+import { Text, useTheme, Surface, TextInput as PaperInput, Button, Chip, IconButton } from 'react-native-paper';
 import api from '../../services/api';
 
 const ManageMaintenance = () => {
@@ -125,7 +125,7 @@ const ManageMaintenance = () => {
                 ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 20, color: theme.colors.onSurfaceVariant }}>No records yet.</Text>}
             />
 
-            <Modal visible={modalVisible} animationType="fade" transparent>
+            <Modal visible={modalVisible} animationType="fade" transparent onRequestClose={() => setModalVisible(false)}>
                 <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.85)' }]}>
                     <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -142,9 +142,7 @@ const ManageMaintenance = () => {
                                             Generate maintenance record.
                                         </Text>
                                     </View>
-                                    <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                        <PaperInput.Icon icon="close" color={theme.colors.onSurfaceVariant} />
-                                    </TouchableOpacity>
+                                    <IconButton icon="close" size={24} iconColor={theme.colors.onSurfaceVariant} onPress={() => setModalVisible(false)} />
                                 </View>
 
                                 <View style={{ marginTop: 30 }}>

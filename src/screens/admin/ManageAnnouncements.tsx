@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator, ScrollView, RefreshControl, KeyboardAvoidingView, Platform } from 'react-native';
-import { Text, useTheme, Surface, TextInput as PaperInput, Button } from 'react-native-paper';
+import { Text, useTheme, Surface, TextInput as PaperInput, Button, IconButton } from 'react-native-paper';
 import api from '../../services/api';
 
 const ManageAnnouncements = () => {
@@ -103,7 +103,7 @@ const ManageAnnouncements = () => {
                 ListEmptyComponent={<Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>No announcements yet.</Text>}
             />
 
-            <Modal visible={modalVisible} animationType="fade" transparent>
+            <Modal visible={modalVisible} animationType="fade" transparent onRequestClose={() => setModalVisible(false)}>
                 <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.85)' }]}>
                     <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -120,9 +120,7 @@ const ManageAnnouncements = () => {
                                             Broadcast to all residents.
                                         </Text>
                                     </View>
-                                    <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                        <PaperInput.Icon icon="close" color={theme.colors.onSurfaceVariant} />
-                                    </TouchableOpacity>
+                                    <IconButton icon="close" size={24} iconColor={theme.colors.onSurfaceVariant} onPress={() => setModalVisible(false)} />
                                 </View>
 
                                 <View style={{ marginTop: 30 }}>

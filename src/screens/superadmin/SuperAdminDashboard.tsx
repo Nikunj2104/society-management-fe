@@ -8,6 +8,7 @@ const SuperAdminDashboard = () => {
     const { signOut, user } = useContext(AuthContext);
     const [analytics, setAnalytics] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const theme = useTheme();
 
     const [refreshing, setRefreshing] = useState(false);
@@ -23,10 +24,12 @@ const SuperAdminDashboard = () => {
 
     const fetchAnalytics = async () => {
         try {
+            setError(null);
             const response = await api.get('/super-admin/analytics');
             setAnalytics(response.data);
-        } catch (error) {
-            console.error('Failed to load analytics', error);
+        } catch (err: any) {
+            console.error('Failed to load analytics', err);
+            setError(err.response?.data?.message || 'Failed to load panel metrics.');
         } finally {
             setLoading(false);
         }
@@ -55,47 +58,57 @@ const SuperAdminDashboard = () => {
                 </Button>
             </View>
 
-            <View style={styles.cardContainer}>
-                <Card style={[styles.card, { backgroundColor: theme.colors.surface, borderLeftColor: theme.colors.primary }]}>
-                    <Card.Content>
-                        <Text style={[styles.cardTitle, { color: theme.colors.onSurfaceVariant }]}>Total Societies</Text>
-                        <Text style={[styles.cardValue, { color: theme.colors.onSurface }]}>{analytics?.totalSocieties || 0}</Text>
-                    </Card.Content>
-                </Card>
-                <Card style={[styles.card, { backgroundColor: theme.colors.surface, borderLeftColor: theme.colors.secondary }]}>
-                    <Card.Content>
-                        <Text style={[styles.cardTitle, { color: theme.colors.onSurfaceVariant }]}>Active Societies</Text>
-                        <Text style={[styles.cardValue, { color: theme.colors.onSurface }]}>{analytics?.activeSocieties || 0}</Text>
-                    </Card.Content>
-                </Card>
-                <Card style={[styles.card, { backgroundColor: theme.colors.surface, borderLeftColor: '#17a2b8' }]}>
-                    <Card.Content>
-                        <Text style={[styles.cardTitle, { color: theme.colors.onSurfaceVariant }]}>Total Admins</Text>
-                        <Text style={[styles.cardValue, { color: theme.colors.onSurface }]}>{analytics?.totalAdmins || 0}</Text>
-                    </Card.Content>
-                </Card>
-                <Card style={[styles.card, { backgroundColor: theme.colors.surface, borderLeftColor: '#ffc107' }]}>
-                    <Card.Content>
-                        <Text style={[styles.cardTitle, { color: theme.colors.onSurfaceVariant }]}>Total Residents</Text>
-                        <Text style={[styles.cardValue, { color: theme.colors.onSurface }]}>{analytics?.totalUsers || 0}</Text>
-                    </Card.Content>
-                </Card>
-            </View>
-
-            <View style={styles.sectionHeader}>
-                <Text variant="titleLarge" style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Summary Metrics</Text>
-            </View>
-
-            <Surface style={[styles.summaryContainer, { backgroundColor: theme.colors.surface }]} elevation={2}>
-                <View style={[styles.summaryItem, { borderBottomColor: theme.colors.surfaceVariant }]}>
-                    <Text style={[styles.summaryLabel, { color: theme.colors.onSurfaceVariant }]}>Maintenance Pending (₹)</Text>
-                    <Text style={[styles.summaryValue, { color: theme.colors.onSurface }]}>{analytics?.maintenanceCollectionSummary?.pending || 0}</Text>
-                </View>
-                <View style={[styles.summaryItem, { borderBottomWidth: 0 }]}>
-                    <Text style={[styles.summaryLabel, { color: theme.colors.onSurfaceVariant }]}>Open Complaints</Text>
-                    <Text style={[styles.summaryValue, { color: theme.colors.onSurface }]}>{analytics?.complaintsSummary?.open || 0}</Text>
-                </View>
-            </Surface>
+            {error ? (
+                <Surface style={[styles.errorContainer, { backgroundColor: '#331010' }]} elevation={2}>
+                    <Text variant="titleMedium" style={{ color: theme.colors.error, fontWeight: 'bold' }}>Authentication Error</Text>
+                    <Text variant="bodyMedium" style={{ color: theme.colors.error, marginTop: 4 }}>{error}</Text>
+                    <Button mode="outlined" onPress={onRefresh} style={{ marginTop: 15 }} textColor={theme.colors.error}>Retry</Button>
+                </Surface>
+            ) : (
+                <>
+                    <View style={styles.cardContainer}>
+                        <Card style={[styles.card, { backgroundColor: theme.colors.surface, borderLeftColor: theme.colors.primary }]}>
+                            <Card.Content>
+                                <Text style={[styles.cardTitle, { color: theme.colors.onSurfaceVariant }]}>Total Societies</Text>
+                                <Text style={[styles.cardValue, { color: theme.colors.onSurface }]}>{analytics?.totalSocieties || 0}</Text>
+                            </Card.Content>
+                        </Card>
+                        <Card style={[styles.card, { backgroundColor: theme.colors.surface, borderLeftColor: theme.colors.secondary }]}>
+                            <Card.Content>
+                                <Text style={[styles.cardTitle, { color: theme.colors.onSurfaceVariant }]}>Active Societies</Text>
+                                <Text style={[styles.cardValue, { color: theme.colors.onSurface }]}>{analytics?.activeSocieties || 0}</Text>
+                            </Card.Content>
+                        </Card>
+                        <Card style={[styles.card, { backgroundColor: theme.colors.surface, borderLeftColor: '#17a2b8' }]}>
+                            <Card.Content>
+                                <Text style={[styles.cardTitle, { color: theme.colors.onSurfaceVariant }]}>Total Admins</Text>
+                                <Text style={[styles.cardValue, { color: theme.colors.onSurface }]}>{analytics?.totalAdmins || 0}</Text>
+                            </Card.Content>
+                        </Card>
+                        <Card style={[styles.card, { backgroundColor: theme.colors.surface, borderLeftColor: '#ffc107' }]}>
+                            <Card.Content>
+                                <Text style={[styles.cardTitle, { color: theme.colors.onSurfaceVariant }]}>Total Residents</Text>
+                                <Text style={[styles.cardValue, { color: theme.colors.onSurface }]}>{analytics?.totalUsers || 0}</Text>
+                            </Card.Content>
+                        </Card>
+                    </View>
+        
+                    <View style={styles.sectionHeader}>
+                        <Text variant="titleLarge" style={[styles.sectionTitle, { color: theme.colors.onSurface }]}>Summary Metrics</Text>
+                    </View>
+        
+                    <Surface style={[styles.summaryContainer, { backgroundColor: theme.colors.surface }]} elevation={2}>
+                        <View style={[styles.summaryItem, { borderBottomColor: theme.colors.surfaceVariant }]}>
+                            <Text style={[styles.summaryLabel, { color: theme.colors.onSurfaceVariant }]}>Maintenance Pending (₹)</Text>
+                            <Text style={[styles.summaryValue, { color: theme.colors.onSurface }]}>{analytics?.maintenanceCollectionSummary?.pending || 0}</Text>
+                        </View>
+                        <View style={[styles.summaryItem, { borderBottomWidth: 0 }]}>
+                            <Text style={[styles.summaryLabel, { color: theme.colors.onSurfaceVariant }]}>Open Complaints</Text>
+                            <Text style={[styles.summaryValue, { color: theme.colors.onSurface }]}>{analytics?.complaintsSummary?.open || 0}</Text>
+                        </View>
+                    </Surface>
+                </>
+            )}
 
         </ScrollView>
     );
@@ -121,7 +134,8 @@ const styles = StyleSheet.create({
     summaryContainer: { borderRadius: 12, padding: 20 },
     summaryItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1 },
     summaryLabel: { fontSize: 16 },
-    summaryValue: { fontSize: 16, fontWeight: 'bold' }
+    summaryValue: { fontSize: 16, fontWeight: 'bold' },
+    errorContainer: { padding: 20, borderRadius: 12, alignItems: 'center', marginTop: 20 },
 });
 
 export default SuperAdminDashboard;

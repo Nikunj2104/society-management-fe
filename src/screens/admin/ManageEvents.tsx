@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity, Modal, Alert, ActivityIndicator, RefreshControl, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
-import { Text, useTheme, Surface, TextInput as PaperInput, Button, Switch } from 'react-native-paper';
+import { Text, useTheme, Surface, TextInput as PaperInput, Button, Switch, IconButton } from 'react-native-paper';
 import api from '../../services/api';
 
 const ManageEvents = () => {
@@ -106,7 +106,7 @@ const ManageEvents = () => {
                 ListEmptyComponent={<Text style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}>No events yet.</Text>}
             />
 
-            <Modal visible={modalVisible} animationType="fade" transparent>
+            <Modal visible={modalVisible} animationType="fade" transparent onRequestClose={() => setModalVisible(false)}>
                 <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.85)' }]}>
                     <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -123,9 +123,7 @@ const ManageEvents = () => {
                                             Organize a community gathering.
                                         </Text>
                                     </View>
-                                    <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                        <PaperInput.Icon icon="close" color={theme.colors.onSurfaceVariant} />
-                                    </TouchableOpacity>
+                                    <IconButton icon="close" size={24} iconColor={theme.colors.onSurfaceVariant} onPress={() => setModalVisible(false)} />
                                 </View>
 
                                 <View style={{ marginTop: 30 }}>
