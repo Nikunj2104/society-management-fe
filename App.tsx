@@ -2,6 +2,7 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { AuthProvider } from './src/context/AuthContext';
 import { CustomThemeProvider } from './src/context/ThemeContext';
+import { NotificationProvider } from './src/context/NotificationContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -25,7 +26,9 @@ export default function App() {
     <SafeAreaProvider>
       <CustomThemeProvider>
         <AuthProvider>
-          <AppNavigator />
+          <NotificationProvider>
+            <AppNavigator />
+          </NotificationProvider>
         </AuthProvider>
       </CustomThemeProvider>
     </SafeAreaProvider>

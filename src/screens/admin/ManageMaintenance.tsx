@@ -8,7 +8,10 @@ const ManageMaintenance = () => {
     const [residents, setResidents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
+    const [bulkModalVisible, setBulkModalVisible] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [form, setForm] = useState({ userId: '', amount: '', month: '', year: '', dueDate: '', description: '' });
+    const [bulkForm, setBulkForm] = useState({ amount: '', month: '', year: '', dueDate: '', description: '' });
     const theme = useTheme();
 
     const [refreshing, setRefreshing] = useState(false);
@@ -73,6 +76,50 @@ const ManageMaintenance = () => {
         }
     };
 
+    const handleBulkGenerate = async () => {
+        if (!bulkForm.amount || !bulkForm.month || !bulkForm.year || !bulkForm.dueDate) {
+            Alert.alert('Error', 'Amount, Month, Year and Due Date are required');
+            return;
+        }
+
+        setIsProcessing(true);
+        try {
+            const res = await api.post('/admin/maintenance/bulk-generate', bulkForm);
+            Alert.alert('Success', res.data.message);
+            setBulkModalVisible(false);
+            setBulkForm({ amount: '', month: '', year: '', dueDate: '', description: '' });
+            fetchData();
+        } catch (error: any) {
+            Alert.alert('Error', error.response?.data?.message || 'Failed to generate bulk bills');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleBulkRemind = async () => {
+        Alert.alert(
+            'Confirm Bulk Reminder',
+            'This will send email and in-app notifications to ALL residents with unpaid records. Continue?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Send to All',
+                    onPress: async () => {
+                        setIsProcessing(true);
+                        try {
+                            const res = await api.post('/admin/maintenance/bulk-remind');
+                            Alert.alert('Success', res.data.message);
+                        } catch (error: any) {
+                            Alert.alert('Error', error.response?.data?.message || 'Failed to send bulk reminders');
+                        } finally {
+                            setIsProcessing(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     if (loading) {
         return (
             <View style={[styles.container, { backgroundColor: theme.colors.background, justifyContent: 'center' }]}>
@@ -85,9 +132,28 @@ const ManageMaintenance = () => {
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <View style={styles.header}>
                 <Text variant="headlineSmall" style={{ fontWeight: 'bold', color: theme.colors.primary }}>Society Maintenance</Text>
-                <Button mode="contained" onPress={() => setModalVisible(true)} buttonColor={theme.colors.primary}>
-                    + Add Bill
-                </Button>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <IconButton 
+                        icon="bell-ring" 
+                        mode="contained" 
+                        containerColor="rgba(245, 158, 11, 0.2)" 
+                        iconColor="#f59e0b"
+                        onPress={handleBulkRemind}
+                        disabled={isProcessing}
+                    />
+                    <Button 
+                        mode="contained" 
+                        onPress={() => setBulkModalVisible(true)} 
+                        buttonColor="rgba(0, 200, 83, 0.2)"
+                        textColor="#00C853"
+                        style={{ borderWidth: 1, borderColor: '#00C853' }}
+                    >
+                        Bulk
+                    </Button>
+                    <Button mode="contained" onPress={() => setModalVisible(true)} buttonColor={theme.colors.primary}>
+                        + Add
+                    </Button>
+                </View>
             </View>
 
             <FlatList
@@ -129,7 +195,7 @@ const ManageMaintenance = () => {
                 <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.85)' }]}>
                     <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                        style={{ width: '100%' }}
+                        style={{ width: '100%', flex: 1, justifyContent: 'center' }}
                     >
                         <Surface style={[styles.modalContent, { backgroundColor: theme.colors.background }]} elevation={5}>
                             <ScrollView contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled">
@@ -256,6 +322,80 @@ const ManageMaintenance = () => {
                                     >
                                         <Text style={{ color: theme.colors.onSurfaceVariant, fontWeight: '600' }}>Cancel</Text>
                                     </TouchableOpacity>
+                                </View>
+                            </ScrollView>
+                        </Surface>
+                    </KeyboardAvoidingView>
+                </View>
+            </Modal>
+
+            {/* Bulk Bill Modal */}
+            <Modal visible={bulkModalVisible} animationType="fade" transparent onRequestClose={() => setBulkModalVisible(false)}>
+                <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.85)' }]}>
+                    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', flex: 1, justifyContent: 'center' }}>
+                        <Surface style={[styles.modalContent, { backgroundColor: theme.colors.background }]} elevation={5}>
+                            <ScrollView contentContainerStyle={{ padding: 24 }}>
+                                <View style={styles.modalHeader}>
+                                    <View>
+                                        <Text variant="headlineSmall" style={{ color: '#00C853', fontWeight: '900', letterSpacing: -1 }}>BULK GENERATE</Text>
+                                        <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>For all society residents.</Text>
+                                    </View>
+                                    <IconButton icon="close" size={24} iconColor={theme.colors.onSurfaceVariant} onPress={() => setBulkModalVisible(false)} />
+                                </View>
+
+                                <View style={{ marginTop: 20 }}>
+                                    <PaperInput
+                                        placeholder="Amount (₹)"
+                                        mode="outlined"
+                                        keyboardType="numeric"
+                                        style={styles.input}
+                                        value={bulkForm.amount}
+                                        onChangeText={(text) => setBulkForm({ ...bulkForm, amount: text })}
+                                        left={<PaperInput.Icon icon="currency-inr" />}
+                                    />
+                                    <View style={styles.rowPremium}>
+                                        <PaperInput
+                                            placeholder="Month"
+                                            mode="outlined"
+                                            style={[styles.input, { flex: 1, marginRight: 10 }]}
+                                            value={bulkForm.month}
+                                            onChangeText={(text) => setBulkForm({ ...bulkForm, month: text })}
+                                        />
+                                        <PaperInput
+                                            placeholder="Year"
+                                            mode="outlined"
+                                            keyboardType="numeric"
+                                            style={[styles.input, { flex: 1 }]}
+                                            value={bulkForm.year}
+                                            onChangeText={(text) => setBulkForm({ ...bulkForm, year: text })}
+                                        />
+                                    </View>
+                                    <PaperInput
+                                        placeholder="Due Date (YYYY-MM-DD)"
+                                        mode="outlined"
+                                        style={styles.input}
+                                        value={bulkForm.dueDate}
+                                        onChangeText={(text) => setBulkForm({ ...bulkForm, dueDate: text })}
+                                        left={<PaperInput.Icon icon="calendar-clock" />}
+                                    />
+                                    <PaperInput
+                                        placeholder="Description (optional)"
+                                        mode="outlined"
+                                        style={styles.input}
+                                        value={bulkForm.description}
+                                        onChangeText={(text) => setBulkForm({ ...bulkForm, description: text })}
+                                        left={<PaperInput.Icon icon="note-text-outline" />}
+                                    />
+
+                                    <Button
+                                        mode="contained"
+                                        onPress={handleBulkGenerate}
+                                        loading={isProcessing}
+                                        style={[styles.postButton, { backgroundColor: '#00C853' }]}
+                                        contentStyle={styles.buttonContent}
+                                    >
+                                        GENERATE FOR ALL
+                                    </Button>
                                 </View>
                             </ScrollView>
                         </Surface>

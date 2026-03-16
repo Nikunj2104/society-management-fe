@@ -235,7 +235,7 @@ const ManageSocieties = () => {
                                         mode="outlined"
                                         multiline
                                         numberOfLines={2}
-                                        style={[styles.input, { height: 80, paddingTop: 8 }]}
+                                        style={[styles.input, { height: 80 }]}
                                         outlineStyle={styles.inputOutline}
                                         value={form.address}
                                         onChangeText={t => setForm({ ...form, address: t })}

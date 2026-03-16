@@ -80,7 +80,7 @@ const ManageComplaints = () => {
                 <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.85)' }]}>
                     <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                        style={{ width: '100%' }}
+                        style={{ width: '100%', flex: 1, justifyContent: 'center' }}
                     >
                         <Surface style={[styles.modalContent, { backgroundColor: theme.colors.background }]} elevation={5}>
                             <ScrollView contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled">

@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, Modal, RefreshControl, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
-import { Text, useTheme, Surface, TextInput as PaperInput, Button, IconButton } from 'react-native-paper';
+import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, Modal, RefreshControl, KeyboardAvoidingView, ScrollView, Platform, Modal as RNModal } from 'react-native';
+import { Text, useTheme, Surface, TextInput as PaperInput, Button, IconButton, Portal } from 'react-native-paper';
+import { MaterialIcons } from '@expo/vector-icons';
 import api from '../../services/api';
 
 const ManageResidents = () => {
     const [residents, setResidents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
+    const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<any>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', flatNumber: '' });
     const [errors, setErrors] = useState<any>({});
     const theme = useTheme();
@@ -18,18 +22,28 @@ const ManageResidents = () => {
         setRefreshing(false);
     }, []);
 
+    const resetForm = () => {
+        setForm({ name: '', email: '', password: '', phone: '', flatNumber: '' });
+        setErrors({});
+    };
+
+    const handleCloseModal = () => {
+        setModalVisible(false);
+        resetForm();
+    };
+
+
+
     useEffect(() => {
-        console.log("ManageResidents mounted, fetching data...");
         fetchResidents();
     }, []);
 
     const fetchResidents = async () => {
         try {
             const res = await api.get('/admin/residents');
-            console.log(`Fetched ${res.data?.length || 0} residents.`);
             setResidents(Array.isArray(res.data) ? res.data : []);
-        } catch (e) {
-            console.error("Fetch residents error:", e);
+        } catch (e: any) {
+            console.error("Fetch residents error:", e.message);
             setResidents([]);
         } finally {
             setLoading(false);
@@ -50,25 +64,35 @@ const ManageResidents = () => {
         setErrors({});
         try {
             await api.post('/admin/residents', form);
-            setModalVisible(false);
-            setForm({ name: '', email: '', password: '', phone: '', flatNumber: '' });
+            handleCloseModal();
             fetchResidents();
             Alert.alert('Success', 'Resident added!');
         } catch (e: any) {
+            console.error('Add resident error:', e.response?.data || e.message);
             Alert.alert('Error', e?.response?.data?.message || 'Failed to add resident');
         }
     };
 
-    const deleteResident = (id: string) => {
-        Alert.alert('Confirm', 'Delete this resident?', [
-            { text: 'Cancel' },
-            {
-                text: 'Delete', style: 'destructive', onPress: async () => {
-                    await api.delete(`/admin/residents/${id}`);
-                    fetchResidents();
-                }
-            }
-        ]);
+    const handleDeleteClick = (resident: any) => {
+        setItemToDelete(resident);
+        setDeleteModalVisible(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsDeleting(true);
+        try {
+            const res = await api.delete(`/admin/residents/${itemToDelete._id}`);
+            setDeleteModalVisible(false);
+            setItemToDelete(null);
+            fetchResidents();
+        } catch (error: any) {
+            console.error(`Delete resident ${itemToDelete._id} error:`, error.response?.data || error.message);
+            const errorMsg = error.response?.data?.message || error.message || 'Failed to remove resident';
+            Alert.alert('Error', errorMsg);
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
     const renderError = (msg: string) => msg ? <Text style={styles.errorText}>{msg}</Text> : null;
@@ -106,21 +130,36 @@ const ManageResidents = () => {
                             </Text>
                             {item.phone ? <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>{item.phone}</Text> : null}
                         </View>
-                        <TouchableOpacity onPress={() => deleteResident(item._id)}>
-                            <Text style={{ color: theme.colors.error, fontWeight: 'bold' }}>Remove</Text>
+                        <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={() => handleDeleteClick(item)}
+                            style={{ padding: 8, zIndex: 999 }}
+                        >
+                            <IconButton
+                                icon="delete-outline"
+                                iconColor={theme.colors.error}
+                                size={24}
+                                style={{ margin: 0 }}
+                                pointerEvents="none"
+                            />
                         </TouchableOpacity>
                     </Surface>
                 )}
             />
 
-            <Modal visible={modalVisible} animationType="fade" transparent onRequestClose={() => setModalVisible(false)}>
+            <Modal visible={modalVisible} animationType="fade" transparent onRequestClose={handleCloseModal}>
                 <View style={[styles.modalBackdrop, { backgroundColor: 'rgba(0,0,0,0.85)' }]}>
                     <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                        style={{ width: '100%' }}
+                        style={{ width: '100%', flex: 1, justifyContent: 'center' }}
                     >
                         <Surface style={[styles.modal, { backgroundColor: theme.colors.background }]} elevation={5}>
-                            <ScrollView contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled">
+                            <ScrollView
+                                contentContainerStyle={{ padding: 20 }}
+                                keyboardShouldPersistTaps="handled"
+                                bounces={false}
+                                overScrollMode="never"
+                            >
                                 <View style={styles.modalHeader}>
                                     <View>
                                         <Text variant="headlineSmall" style={{ color: theme.colors.primary, fontWeight: '900', letterSpacing: -1 }}>
@@ -130,10 +169,10 @@ const ManageResidents = () => {
                                             Add a member to the society.
                                         </Text>
                                     </View>
-                                    <IconButton icon="close" size={24} iconColor={theme.colors.onSurfaceVariant} onPress={() => setModalVisible(false)} />
+                                    <IconButton icon="close" size={24} iconColor={theme.colors.onSurfaceVariant} onPress={handleCloseModal} />
                                 </View>
 
-                                <View style={{ marginTop: 30 }}>
+                                <View style={{ marginTop: 20 }}>
                                     <PaperInput
                                         placeholder="Full Name *"
                                         placeholderTextColor={theme.colors.onSurfaceVariant}
@@ -157,6 +196,9 @@ const ManageResidents = () => {
                                         outlineStyle={styles.inputOutline}
                                         autoCapitalize="none"
                                         keyboardType="email-address"
+                                        autoComplete="off"
+                                        importantForAutofill="no"
+                                        textContentType="none"
                                         value={form.email}
                                         onChangeText={val => setForm({ ...form, email: val })}
                                         left={<PaperInput.Icon icon="email-outline" color={errors.email ? theme.colors.error : theme.colors.onSurfaceVariant} />}
@@ -167,12 +209,15 @@ const ManageResidents = () => {
                                     />
                                     {renderError(errors.email)}
                                     <PaperInput
-                                        placeholder="Temporary Password *"
+                                        placeholder="Password *"
                                         placeholderTextColor={theme.colors.onSurfaceVariant}
                                         mode="outlined"
                                         style={styles.input}
                                         outlineStyle={styles.inputOutline}
                                         secureTextEntry
+                                        autoComplete="new-password"
+                                        importantForAutofill="no"
+                                        textContentType="none"
                                         value={form.password}
                                         onChangeText={val => setForm({ ...form, password: val })}
                                         left={<PaperInput.Icon icon="lock-outline" color={errors.password ? theme.colors.error : theme.colors.onSurfaceVariant} />}
@@ -219,7 +264,7 @@ const ManageResidents = () => {
                                         textColor={theme.colors.onPrimary}
                                         labelStyle={{ fontSize: 16, fontWeight: 'bold', letterSpacing: 1 }}
                                     >
-                                        SAVE RESIDENT
+                                        ADD RESIDENT
                                     </Button>
 
                                     <TouchableOpacity
@@ -234,6 +279,52 @@ const ManageResidents = () => {
                     </KeyboardAvoidingView>
                 </View>
             </Modal>
+
+            {/* Custom Deletion Modal */}
+            <Portal>
+                <RNModal
+                    visible={deleteModalVisible}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setDeleteModalVisible(false)}
+                >
+                    <View style={styles.deleteModalOverlay}>
+                        <Surface style={[styles.deleteModalContent, { backgroundColor: theme.colors.elevation.level3 }]} elevation={5}>
+                            <View style={styles.deleteModalIconContainer}>
+                                <MaterialIcons name="report-problem" size={40} color={theme.colors.error} />
+                            </View>
+                            
+                            <Text variant="headlineSmall" style={styles.deleteModalTitle}>Confirm Delete</Text>
+                            <Text variant="bodyMedium" style={styles.deleteModalSubtitle}>
+                                Are you sure you want to remove <Text style={{fontWeight: 'bold', color: theme.colors.onSurface}}>{itemToDelete?.name}</Text>? 
+                                This action cannot be undone.
+                            </Text>
+
+                            <View style={styles.deleteModalFooter}>
+                                <Button 
+                                    mode="text" 
+                                    onPress={() => setDeleteModalVisible(false)} 
+                                    textColor={theme.colors.onSurfaceVariant}
+                                    style={{ flex: 1, marginRight: 8 }}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button 
+                                    mode="contained" 
+                                    onPress={confirmDelete} 
+                                    buttonColor={theme.colors.error}
+                                    textColor="#fff"
+                                    loading={isDeleting}
+                                    style={{ flex: 1 }}
+                                    contentStyle={{ paddingVertical: 4 }}
+                                >
+                                    Delete
+                                </Button>
+                            </View>
+                        </Surface>
+                    </View>
+                </RNModal>
+            </Portal>
         </View>
     );
 };
@@ -242,11 +333,11 @@ const styles = StyleSheet.create({
     container: { flex: 1, padding: 20, paddingTop: 60 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     card: { padding: 15, borderRadius: 10, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    modalBackdrop: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.85)', padding: 20 },
-    modal: { borderRadius: 24, overflow: 'hidden', maxHeight: '90%' },
+    modalBackdrop: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.85)', padding: 10 },
+    modal: { borderRadius: 24, overflow: 'hidden', maxHeight: '95%', width: '100%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     input: {
-        marginBottom: 16,
+        marginBottom: 12,
         fontSize: 16,
         backgroundColor: '#121212',
     },
@@ -273,6 +364,47 @@ const styles = StyleSheet.create({
         marginLeft: 4,
         fontWeight: '600'
     },
+    // Custom Deletion Modal Styles
+    deleteModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.85)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24
+    },
+    deleteModalContent: {
+        width: '100%',
+        maxWidth: 340,
+        borderRadius: 28,
+        padding: 24,
+        alignItems: 'center',
+    },
+    deleteModalIconContainer: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: 'rgba(255, 68, 68, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16
+    },
+    deleteModalTitle: {
+        fontWeight: '900',
+        letterSpacing: -0.5,
+        marginBottom: 8,
+        textAlign: 'center'
+    },
+    deleteModalSubtitle: {
+        textAlign: 'center',
+        color: 'rgba(255,255,255,0.6)',
+        marginBottom: 32,
+        lineHeight: 20
+    },
+    deleteModalFooter: {
+        flexDirection: 'row',
+        width: '100%',
+        justifyContent: 'space-between'
+    }
 });
 
 export default ManageResidents;
