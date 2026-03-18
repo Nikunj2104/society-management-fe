@@ -22,7 +22,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.societymanagement.admin"
+      "package": "com.societymanagement.admin",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/icon.png"

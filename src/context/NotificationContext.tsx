@@ -4,6 +4,7 @@ import { Text, Surface, useTheme, IconButton } from 'react-native-paper';
 import { MaterialIcons } from '@expo/vector-icons';
 import { io, Socket } from 'socket.io-client';
 import { AuthContext } from './AuthContext';
+import { registerForPushNotificationsAsync } from '../services/notificationService';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -40,6 +41,9 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
             socketRef.current.on(eventName, (data: NotificationData) => {
                 showNotification(data);
             });
+
+            // Register for Push Notifications
+            registerForPushNotificationsAsync();
 
             return () => {
                 if (socketRef.current) {
