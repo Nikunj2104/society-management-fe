@@ -33,6 +33,22 @@
         "projectId": "5201f7b8-30aa-40c9-84e7-f1ee7b995323"
       }
     },
-    "owner": "nikunj.shah"
+    "owner": "nikunj.shah",
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0",
+            "kotlinVersion": "2.0.21",
+            "gradleProperties": {
+              "org.gradle.jvmargs": "-Xmx4096m -XX:MaxMetaspaceSize=512m"
+            }
+          }
+        }
+      ]
+    ]
   }
 }
